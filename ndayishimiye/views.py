@@ -1,8 +1,9 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.http import Http404
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
 
@@ -40,6 +41,14 @@ def logout_view(request):
 @login_required
 def profile(request):
     return render(request, 'ndayishimiye/profile.html')
+
+
+@login_required
+def profile_by_id(request, user_id):
+    if request.user.id != user_id and not request.user.is_staff:
+        raise Http404
+    user = get_object_or_404(User, id=user_id)
+    return render(request, 'ndayishimiye/profile.html', {'viewed_user': user})
 
 
 @login_required

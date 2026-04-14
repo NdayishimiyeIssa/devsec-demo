@@ -11,6 +11,10 @@ class UASTests(TestCase):
             username='testuser',
             password='TestPass123!'
         )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            password='OtherPass123!'
+        )
         self.staff_user = User.objects.create_user(
             username='staffuser',
             password='StaffPass123!',
@@ -62,4 +66,36 @@ class UASTests(TestCase):
     def test_anonymous_cannot_access_profile(self):
         self.client.logout()
         response = self.client.get(reverse('ndayishimiye:profile'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_user_can_view_own_profile_by_id(self):
+        self.client.login(username='testuser', password='TestPass123!')
+        response = self.client.get(
+            reverse('ndayishimiye:profile_by_id',
+                    kwargs={'user_id': self.user.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_user_cannot_view_other_profile_by_id(self):
+        self.client.login(username='testuser', password='TestPass123!')
+        response = self.client.get(
+            reverse('ndayishimiye:profile_by_id',
+                    kwargs={'user_id': self.other_user.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_staff_can_view_any_profile_by_id(self):
+        self.client.login(username='staffuser', password='StaffPass123!')
+        response = self.client.get(
+            reverse('ndayishimiye:profile_by_id',
+                    kwargs={'user_id': self.user.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_anonymous_cannot_view_profile_by_id(self):
+        self.client.logout()
+        response = self.client.get(
+            reverse('ndayishimiye:profile_by_id',
+                    kwargs={'user_id': self.user.id})
+        )
         self.assertEqual(response.status_code, 302)
