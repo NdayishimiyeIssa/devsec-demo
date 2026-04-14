@@ -35,3 +35,4 @@ class UASTests(TestCase):
         self.client.login(username='testuser', password='TestPass123!')
         response = self.client.get(reverse('ndayishimiye:logout'))
         self.assertRedirects(response, reverse('ndayishimiye:login'))
+        
