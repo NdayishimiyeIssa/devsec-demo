@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.contrib import messages
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
@@ -53,4 +54,19 @@ def password_change(request):
     else:
         form = CustomPasswordChangeForm(request.user)
     return render(request, 'ndayishimiye/password_change.html', {'form': form})
-    
+
+
+def is_staff_user(user):
+    return user.is_staff
+
+
+def home(request):
+    return render(request, 'ndayishimiye/home.html')
+
+
+@login_required
+@user_passes_test(is_staff_user)
+def staff_dashboard(request):
+    users = User.objects.all()
+    context = {'users': users}
+    return render(request, 'ndayishimiye/staff_dashboard.html', context)
