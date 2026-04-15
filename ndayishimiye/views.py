@@ -5,7 +5,21 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import Http404
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
+
+DJANGO_BACKEND = 'django.contrib.auth.backends.ModelBackend'
+
+
+def _get_safe_redirect(request, fallback):
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return fallback
 
 
 def register(request):
@@ -13,9 +27,11 @@ def register(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user, backend=DJANGO_BACKEND)
             messages.success(request, 'Account created successfully!')
-            return redirect('ndayishimiye:profile')
+            return redirect(_get_safe_redirect(
+                request, 'ndayishimiye:profile'
+            ))
     else:
         form = RegisterForm()
     return render(request, 'ndayishimiye/register.html', {'form': form})
@@ -25,12 +41,17 @@ def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
-            login(request, form.get_user())
+            login(request, form.get_user(), backend=DJANGO_BACKEND)
             messages.success(request, 'Logged in successfully!')
-            return redirect('ndayishimiye:profile')
+            return redirect(_get_safe_redirect(
+                request, 'ndayishimiye:profile'
+            ))
     else:
         form = LoginForm()
-    return render(request, 'ndayishimiye/login.html', {'form': form})
+    return render(request, 'ndayishimiye/login.html', {
+        'form': form,
+        'next': request.GET.get('next', ''),
+    })
 
 
 def logout_view(request):

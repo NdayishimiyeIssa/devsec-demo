@@ -185,3 +185,29 @@ class UASTests(TestCase):
             'password': 'TestPass123!'
         })
         self.assertEqual(response.status_code, 403)
+
+    def test_login_safe_next_redirect(self):
+        response = self.client.post(reverse('ndayishimiye:login'), {
+            'username': 'testuser',
+            'password': 'TestPass123!',
+            'next': '/ndayishimiye/profile/',
+        })
+        self.assertRedirects(response, '/ndayishimiye/profile/')
+
+    def test_login_unsafe_next_redirect_ignored(self):
+        response = self.client.post(reverse('ndayishimiye:login'), {
+            'username': 'testuser',
+            'password': 'TestPass123!',
+            'next': 'https://evil.com',
+        })
+        self.assertRedirects(response, reverse('ndayishimiye:profile'))
+
+    def test_register_unsafe_next_redirect_ignored(self):
+        response = self.client.post(reverse('ndayishimiye:register'), {
+            'username': 'newuser2',
+            'email': 'new2@example.com',
+            'password1': 'NewPass123!',
+            'password2': 'NewPass123!',
+            'next': 'https://evil.com',
+        })
+        self.assertRedirects(response, reverse('ndayishimiye:profile'))
