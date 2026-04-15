@@ -150,3 +150,38 @@ class UASTests(TestCase):
             'password': 'TestPass123!'
         })
         self.assertRedirects(response, reverse('ndayishimiye:profile'))
+
+    def test_profile_update_requires_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        response = csrf_client.post(
+            reverse('ndayishimiye:profile_update'),
+            {'email': 'newemail@example.com'}
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_profile_update_works_with_csrf(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('ndayishimiye:profile_update'),
+            {'email': 'newemail@example.com'}
+        )
+        self.assertRedirects(response, reverse('ndayishimiye:profile'))
+
+    def test_register_post_requires_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        response = csrf_client.post(reverse('ndayishimiye:register'), {
+            'username': 'newuser',
+            'email': 'new@example.com',
+            'password1': 'NewPass123!',
+            'password2': 'NewPass123!'
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_login_post_requires_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        response = csrf_client.post(reverse('ndayishimiye:login'), {
+            'username': 'testuser',
+            'password': 'TestPass123!'
+        })
+        self.assertEqual(response.status_code, 403)

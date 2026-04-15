@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import Http404
+from django.views.decorators.http import require_POST
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
 
@@ -79,3 +80,14 @@ def staff_dashboard(request):
     users = User.objects.all()
     context = {'users': users}
     return render(request, 'ndayishimiye/staff_dashboard.html', context)
+
+
+@login_required
+@require_POST
+def profile_update(request):
+    new_email = request.POST.get('email', '')
+    if new_email:
+        request.user.email = new_email
+        request.user.save()
+        messages.success(request, 'Email updated successfully!')
+    return redirect('ndayishimiye:profile')
