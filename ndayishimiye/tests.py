@@ -1,8 +1,13 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
 
 
+@override_settings(
+    AXES_ENABLED=True,
+    AXES_FAILURE_LIMIT=5,
+    AXES_COOLOFF_TIME=1,
+)
 class UASTests(TestCase):
 
     def setUp(self):
@@ -42,7 +47,7 @@ class UASTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_logout(self):
-        self.client.login(username='testuser', password='TestPass123!')
+        self.client.force_login(self.user)
         response = self.client.get(reverse('ndayishimiye:logout'))
         self.assertRedirects(response, reverse('ndayishimiye:login'))
 
@@ -55,12 +60,12 @@ class UASTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_normal_user_cannot_access_staff_dashboard(self):
-        self.client.login(username='testuser', password='TestPass123!')
+        self.client.force_login(self.user)
         response = self.client.get(reverse('ndayishimiye:staff_dashboard'))
         self.assertEqual(response.status_code, 302)
 
     def test_staff_user_can_access_staff_dashboard(self):
-        self.client.login(username='staffuser', password='StaffPass123!')
+        self.client.force_login(self.staff_user)
         response = self.client.get(reverse('ndayishimiye:staff_dashboard'))
         self.assertEqual(response.status_code, 200)
 
@@ -70,7 +75,7 @@ class UASTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_user_can_view_own_profile_by_id(self):
-        self.client.login(username='testuser', password='TestPass123!')
+        self.client.force_login(self.user)
         response = self.client.get(
             reverse('ndayishimiye:profile_by_id',
                     kwargs={'user_id': self.user.id})
@@ -78,7 +83,7 @@ class UASTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_user_cannot_view_other_profile_by_id(self):
-        self.client.login(username='testuser', password='TestPass123!')
+        self.client.force_login(self.user)
         response = self.client.get(
             reverse('ndayishimiye:profile_by_id',
                     kwargs={'user_id': self.other_user.id})
@@ -86,7 +91,7 @@ class UASTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_staff_can_view_any_profile_by_id(self):
-        self.client.login(username='staffuser', password='StaffPass123!')
+        self.client.force_login(self.staff_user)
         response = self.client.get(
             reverse('ndayishimiye:profile_by_id',
                     kwargs={'user_id': self.user.id})
@@ -126,3 +131,22 @@ class UASTests(TestCase):
             reverse('ndayishimiye:password_reset_complete')
         )
         self.assertEqual(response.status_code, 200)
+
+    def test_login_lockout_after_too_many_attempts(self):
+        for i in range(5):
+            self.client.post(reverse('ndayishimiye:login'), {
+                'username': 'testuser',
+                'password': 'WrongPassword!'
+            })
+        response = self.client.post(reverse('ndayishimiye:login'), {
+            'username': 'testuser',
+            'password': 'WrongPassword!'
+        })
+        self.assertIn(response.status_code, [403, 429])
+
+    def test_successful_login_not_blocked(self):
+        response = self.client.post(reverse('ndayishimiye:login'), {
+            'username': 'testuser',
+            'password': 'TestPass123!'
+        })
+        self.assertRedirects(response, reverse('ndayishimiye:profile'))
