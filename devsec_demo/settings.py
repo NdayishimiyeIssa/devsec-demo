@@ -127,3 +127,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/ndayishimiye/profile/'
 LOGOUT_REDIRECT_URL = '/ndayishimiye/login/'
 LOGIN_URL = '/ndayishimiye/login/'
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'
+)
