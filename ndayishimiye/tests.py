@@ -211,3 +211,44 @@ class UASTests(TestCase):
             'next': 'https://evil.com',
         })
         self.assertRedirects(response, reverse('ndayishimiye:profile'))
+
+    def test_login_success_is_logged(self):
+        with self.assertLogs('ndayishimiye.audit', level='INFO') as cm:
+            self.client.post(reverse('ndayishimiye:login'), {
+                'username': 'testuser',
+                'password': 'TestPass123!'
+            })
+        self.assertTrue(any('LOGIN_SUCCESS' in msg for msg in cm.output))
+
+    def test_login_failure_is_logged(self):
+        with self.assertLogs('ndayishimiye.audit', level='WARNING') as cm:
+            self.client.post(reverse('ndayishimiye:login'), {
+                'username': 'testuser',
+                'password': 'WrongPassword!'
+            })
+        self.assertTrue(any('LOGIN_FAILURE' in msg for msg in cm.output))
+
+    def test_register_success_is_logged(self):
+        with self.assertLogs('ndayishimiye.audit', level='INFO') as cm:
+            self.client.post(reverse('ndayishimiye:register'), {
+                'username': 'newuser3',
+                'email': 'new3@example.com',
+                'password1': 'NewPass123!',
+                'password2': 'NewPass123!'
+            })
+        self.assertTrue(any('REGISTER_SUCCESS' in msg for msg in cm.output))
+
+    def test_logout_is_logged(self):
+        self.client.force_login(self.user)
+        with self.assertLogs('ndayishimiye.audit', level='INFO') as cm:
+            self.client.get(reverse('ndayishimiye:logout'))
+        self.assertTrue(any('LOGOUT' in msg for msg in cm.output))
+
+    def test_password_never_in_logs(self):
+        with self.assertLogs('ndayishimiye.audit', level='INFO') as cm:
+            self.client.post(reverse('ndayishimiye:login'), {
+                'username': 'testuser',
+                'password': 'TestPass123!'
+            })
+        for msg in cm.output:
+            self.assertNotIn('TestPass123!', msg)

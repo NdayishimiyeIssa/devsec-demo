@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -8,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
+audit_log = logging.getLogger('ndayishimiye.audit')
 DJANGO_BACKEND = 'django.contrib.auth.backends.ModelBackend'
 
 
@@ -28,10 +30,20 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user, backend=DJANGO_BACKEND)
+            audit_log.info(
+                'REGISTER_SUCCESS username=%s ip=%s',
+                user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
             messages.success(request, 'Account created successfully!')
             return redirect(_get_safe_redirect(
                 request, 'ndayishimiye:profile'
             ))
+        else:
+            audit_log.warning(
+                'REGISTER_FAILURE ip=%s',
+                request.META.get('REMOTE_ADDR'),
+            )
     else:
         form = RegisterForm()
     return render(request, 'ndayishimiye/register.html', {'form': form})
@@ -41,11 +53,23 @@ def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
-            login(request, form.get_user(), backend=DJANGO_BACKEND)
+            user = form.get_user()
+            login(request, user, backend=DJANGO_BACKEND)
+            audit_log.info(
+                'LOGIN_SUCCESS username=%s ip=%s',
+                user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
             messages.success(request, 'Logged in successfully!')
             return redirect(_get_safe_redirect(
                 request, 'ndayishimiye:profile'
             ))
+        else:
+            audit_log.warning(
+                'LOGIN_FAILURE username=%s ip=%s',
+                request.POST.get('username', ''),
+                request.META.get('REMOTE_ADDR'),
+            )
     else:
         form = LoginForm()
     return render(request, 'ndayishimiye/login.html', {
@@ -55,6 +79,15 @@ def login_view(request):
 
 
 def logout_view(request):
+    if request.user.is_authenticated:
+        username = request.user.username
+    else:
+        username = 'anonymous'
+    audit_log.info(
+        'LOGOUT username=%s ip=%s',
+        username,
+        request.META.get('REMOTE_ADDR'),
+    )
     logout(request)
     messages.info(request, 'You have been logged out.')
     return redirect('ndayishimiye:login')
@@ -80,8 +113,19 @@ def password_change(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
+            audit_log.info(
+                'PASSWORD_CHANGE_SUCCESS username=%s ip=%s',
+                request.user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
             messages.success(request, 'Password changed successfully!')
             return redirect('ndayishimiye:profile')
+        else:
+            audit_log.warning(
+                'PASSWORD_CHANGE_FAILURE username=%s ip=%s',
+                request.user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
     else:
         form = CustomPasswordChangeForm(request.user)
     return render(request, 'ndayishimiye/password_change.html', {'form': form})
@@ -110,5 +154,10 @@ def profile_update(request):
     if new_email:
         request.user.email = new_email
         request.user.save()
+        audit_log.info(
+            'PROFILE_UPDATE username=%s ip=%s',
+            request.user.username,
+            request.META.get('REMOTE_ADDR'),
+        )
         messages.success(request, 'Email updated successfully!')
     return redirect('ndayishimiye:profile')
