@@ -1,6 +1,7 @@
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from ndayishimiye.models import UserProfile
 
 
 @override_settings(
@@ -17,15 +18,18 @@ class UASTests(TestCase):
             email='testuser@example.com',
             password='TestPass123!'
         )
+        UserProfile.objects.get_or_create(user=self.user)
         self.other_user = User.objects.create_user(
             username='otheruser',
             password='OtherPass123!'
         )
+        UserProfile.objects.get_or_create(user=self.other_user)
         self.staff_user = User.objects.create_user(
             username='staffuser',
             password='StaffPass123!',
             is_staff=True
         )
+        UserProfile.objects.get_or_create(user=self.staff_user)
 
     def test_register_page_loads(self):
         response = self.client.get(reverse('ndayishimiye:register'))
@@ -252,3 +256,30 @@ class UASTests(TestCase):
             })
         for msg in cm.output:
             self.assertNotIn('TestPass123!', msg)
+
+    def test_xss_script_is_escaped_in_bio(self):
+        self.client.force_login(self.user)
+        xss_payload = '<script>alert("xss")</script>'
+        self.client.post(reverse('ndayishimiye:profile'), {
+            'bio': xss_payload
+        })
+        response = self.client.get(reverse('ndayishimiye:profile'))
+        self.assertNotIn(xss_payload, response.content.decode())
+        self.assertIn('&lt;script&gt;', response.content.decode())
+
+    def test_normal_bio_renders_correctly(self):
+        self.client.force_login(self.user)
+        self.client.post(reverse('ndayishimiye:profile'), {
+            'bio': 'I love Django and security!'
+        })
+        response = self.client.get(reverse('ndayishimiye:profile'))
+        self.assertIn('I love Django and security!', response.content.decode())
+
+    def test_xss_img_tag_is_escaped(self):
+        self.client.force_login(self.user)
+        xss_payload = '<img src=x onerror=alert(1)>'
+        self.client.post(reverse('ndayishimiye:profile'), {
+            'bio': xss_payload
+        })
+        response = self.client.get(reverse('ndayishimiye:profile'))
+        self.assertNotIn(xss_payload, response.content.decode())

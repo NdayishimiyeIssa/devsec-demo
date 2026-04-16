@@ -8,6 +8,8 @@ from django.http import Http404
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
+from .forms import ProfileBioForm
+from .models import UserProfile
 
 audit_log = logging.getLogger('ndayishimiye.audit')
 DJANGO_BACKEND = 'django.contrib.auth.backends.ModelBackend'
@@ -29,6 +31,7 @@ def register(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+            UserProfile.objects.create(user=user)
             login(request, user, backend=DJANGO_BACKEND)
             audit_log.info(
                 'REGISTER_SUCCESS username=%s ip=%s',
@@ -95,7 +98,24 @@ def logout_view(request):
 
 @login_required
 def profile(request):
-    return render(request, 'ndayishimiye/profile.html')
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = ProfileBioForm(request.POST, instance=profile_obj)
+        if form.is_valid():
+            form.save()
+            audit_log.info(
+                'PROFILE_BIO_UPDATE username=%s ip=%s',
+                request.user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
+            messages.success(request, 'Bio updated successfully!')
+            return redirect('ndayishimiye:profile')
+    else:
+        form = ProfileBioForm(instance=profile_obj)
+    return render(request, 'ndayishimiye/profile.html', {
+        'form': form,
+        'profile': profile_obj,
+    })
 
 
 @login_required
@@ -103,7 +123,11 @@ def profile_by_id(request, user_id):
     if request.user.id != user_id and not request.user.is_staff:
         raise Http404
     user = get_object_or_404(User, id=user_id)
-    return render(request, 'ndayishimiye/profile.html', {'viewed_user': user})
+    profile_obj, _ = UserProfile.objects.get_or_create(user=user)
+    return render(request, 'ndayishimiye/profile.html', {
+        'viewed_user': user,
+        'profile': profile_obj,
+    })
 
 
 @login_required

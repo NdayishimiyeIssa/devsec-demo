@@ -1,1 +1,12 @@
-# No custom models needed - using Django's built-in User model
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='profile_ext'
+    )
+    bio = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f'Profile of {self.user.username}'

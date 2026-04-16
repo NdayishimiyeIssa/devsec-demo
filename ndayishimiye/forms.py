@@ -3,6 +3,7 @@ from django.contrib.auth.forms import (
     UserCreationForm, AuthenticationForm, PasswordChangeForm
 )
 from django.contrib.auth.models import User
+from .models import UserProfile
 
 
 class RegisterForm(UserCreationForm):
@@ -19,3 +20,12 @@ class LoginForm(AuthenticationForm):
 
 class CustomPasswordChangeForm(PasswordChangeForm):
     pass
+
+
+class ProfileBioForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['bio']
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4}),
+        }
