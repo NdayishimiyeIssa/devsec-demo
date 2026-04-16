@@ -155,3 +155,30 @@ LOGGING = {
 # Media files (uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# --- Security Hardening Settings ---
+
+# Prevent browsers from guessing content types
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Enable XSS filter in older browsers
+SECURE_BROWSER_XSS_FILTER = True
+
+# Clickjacking protection
+X_FRAME_OPTIONS = 'DENY'
+
+# Cookie security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# HTTPS-only settings (enabled in production via env var)
+_HTTPS = os.environ.get('DJANGO_HTTPS', 'False') == 'True'
+
+SESSION_COOKIE_SECURE = _HTTPS
+CSRF_COOKIE_SECURE = _HTTPS
+SECURE_SSL_REDIRECT = _HTTPS
+SECURE_HSTS_SECONDS = 31536000 if _HTTPS else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _HTTPS
+SECURE_HSTS_PRELOAD = _HTTPS

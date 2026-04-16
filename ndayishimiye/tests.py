@@ -332,3 +332,28 @@ class UASTests(TestCase):
         self.client.logout()
         response = self.client.get(reverse('ndayishimiye:upload_document'))
         self.assertEqual(response.status_code, 302)
+
+    def test_security_content_type_nosniff(self):
+        from django.conf import settings
+        self.assertTrue(settings.SECURE_CONTENT_TYPE_NOSNIFF)
+
+    def test_x_frame_options_deny(self):
+        from django.conf import settings
+        self.assertEqual(settings.X_FRAME_OPTIONS, 'DENY')
+
+    def test_session_cookie_httponly(self):
+        from django.conf import settings
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+
+    def test_csrf_cookie_httponly(self):
+        from django.conf import settings
+        self.assertTrue(settings.CSRF_COOKIE_HTTPONLY)
+
+    def test_session_cookie_samesite(self):
+        from django.conf import settings
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, 'Lax')
+
+    def test_secret_key_not_hardcoded(self):
+        from django.conf import settings
+        self.assertNotIn('insecure', settings.SECRET_KEY.lower())
+        self.assertGreater(len(settings.SECRET_KEY), 20)
