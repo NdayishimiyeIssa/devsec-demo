@@ -7,8 +7,10 @@ from django.contrib import messages
 from django.http import Http404
 from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
-from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
-from .forms import ProfileBioForm
+from .forms import (
+    RegisterForm, LoginForm, CustomPasswordChangeForm,
+    ProfileBioForm, AvatarUploadForm, DocumentUploadForm
+)
 from .models import UserProfile
 
 audit_log = logging.getLogger('ndayishimiye.audit')
@@ -185,3 +187,55 @@ def profile_update(request):
         )
         messages.success(request, 'Email updated successfully!')
     return redirect('ndayishimiye:profile')
+
+
+@login_required
+def upload_avatar(request):
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = AvatarUploadForm(
+            request.POST, request.FILES, instance=profile_obj
+        )
+        if form.is_valid():
+            form.save()
+            audit_log.info(
+                'AVATAR_UPLOAD username=%s ip=%s',
+                request.user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
+            messages.success(request, 'Avatar uploaded successfully!')
+            return redirect('ndayishimiye:profile')
+        else:
+            messages.error(
+                request, 'Invalid file. Please check the requirements.'
+            )
+    else:
+        form = AvatarUploadForm(instance=profile_obj)
+    return render(request, 'ndayishimiye/upload_avatar.html', {'form': form})
+
+
+@login_required
+def upload_document(request):
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = DocumentUploadForm(
+            request.POST, request.FILES, instance=profile_obj
+        )
+        if form.is_valid():
+            form.save()
+            audit_log.info(
+                'DOCUMENT_UPLOAD username=%s ip=%s',
+                request.user.username,
+                request.META.get('REMOTE_ADDR'),
+            )
+            messages.success(request, 'Document uploaded successfully!')
+            return redirect('ndayishimiye:profile')
+        else:
+            messages.error(
+                request, 'Invalid file. Please check the requirements.'
+            )
+    else:
+        form = DocumentUploadForm(instance=profile_obj)
+    return render(
+        request, 'ndayishimiye/upload_document.html', {'form': form}
+    )

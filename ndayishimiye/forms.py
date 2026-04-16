@@ -4,6 +4,7 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth.models import User
 from .models import UserProfile
+from .validators import validate_avatar, validate_document
 
 
 class RegisterForm(UserCreationForm):
@@ -29,3 +30,27 @@ class ProfileBioForm(forms.ModelForm):
         widgets = {
             'bio': forms.Textarea(attrs={'rows': 4}),
         }
+
+
+class AvatarUploadForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['avatar']
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        if avatar:
+            validate_avatar(avatar)
+        return avatar
+
+
+class DocumentUploadForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['document']
+
+    def clean_document(self):
+        document = self.cleaned_data.get('document')
+        if document:
+            validate_document(document)
+        return document

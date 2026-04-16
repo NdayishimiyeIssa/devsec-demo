@@ -14,6 +14,8 @@ urlpatterns = [
     path('profile/<int:user_id>/', views.profile_by_id, name='profile_by_id'),
     path('password-change/', views.password_change, name='password_change'),
     path('staff/', views.staff_dashboard, name='staff_dashboard'),
+    path('upload/avatar/', views.upload_avatar, name='upload_avatar'),
+    path('upload/document/', views.upload_document, name='upload_document'),
 
     # Password reset URLs using Django built-ins
     path(

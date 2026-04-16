@@ -1,6 +1,7 @@
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from ndayishimiye.models import UserProfile
 
 
@@ -283,3 +284,51 @@ class UASTests(TestCase):
         })
         response = self.client.get(reverse('ndayishimiye:profile'))
         self.assertNotIn(xss_payload, response.content.decode())
+
+    def test_avatar_upload_page_loads(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('ndayishimiye:upload_avatar'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_document_upload_page_loads(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('ndayishimiye:upload_document'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_invalid_avatar_extension_rejected(self):
+        self.client.force_login(self.user)
+        bad_file = SimpleUploadedFile(
+            'malware.exe',
+            b'fake content',
+            content_type='application/octet-stream'
+        )
+        response = self.client.post(
+            reverse('ndayishimiye:upload_avatar'),
+            {'avatar': bad_file}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.profile_ext.avatar)
+
+    def test_invalid_document_extension_rejected(self):
+        self.client.force_login(self.user)
+        bad_file = SimpleUploadedFile(
+            'script.php',
+            b'<?php echo "hack"; ?>',
+            content_type='text/php'
+        )
+        response = self.client.post(
+            reverse('ndayishimiye:upload_document'),
+            {'document': bad_file}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.profile_ext.avatar)
+
+    def test_avatar_upload_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('ndayishimiye:upload_avatar'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_document_upload_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('ndayishimiye:upload_document'))
+        self.assertEqual(response.status_code, 302)
